@@ -19,10 +19,11 @@ class EccCycl(object):
 		self.bigGearAxisRadius = 0
 		self.smallGearAxisRadius = 0
 		self.slices = 10
+		self.bigGearFn = 120
 		self.smallGearFn = 60
 		self.axisFn = 15
 
-	def bigGear(self, h):
+	def bigGear(self, h, shell = 0):
 		if not self.checkValues():
 			print 'Incorrect values'
 			return None
@@ -32,12 +33,28 @@ class EccCycl(object):
 		nr = self._R / self._r
 		n = int(2 * pi / self._dt * nr)
 		t = 0
+		
 		points = []
+		cutPoints = []
+		paths = [[], []]
+		
 		for i in xrange(n):
 			t += self._dt
-			points.append(self.epitrochoid(t))
 			
-		res = polygon(points)
+			x, y = self.epitrochoid(t)
+			points.append([x, y])
+			paths[0].append(i)
+			
+			if shell > 0:
+				xf, yf = self.equidistant(t, shell)
+			
+				cutPoints.append([x - xf, y - yf])
+				paths[1].append(n+i)
+			
+		if shell > 0:
+			points += cutPoints
+		
+		res = polygon(points, paths)
 		
 		res = linear_extrude(height = h, twist = self.twist(h)/nr, slices=self._slices) (res)
 		
@@ -53,31 +70,50 @@ class EccCycl(object):
 		
 		res = circle(self._r, fn = self._smallGearFn)
 		res <<= [self._e * self._r, 0, 0]
-		res = linear_extrude(height = h, twist = -self.twist(h), slices = self._slices) (res)
+		res = linear_extrude(height = h, twist = -self.twist(h), slices = self._slices, fn = self._smallGearFn) (res)
 		
 		if self._axis_r > 0:
 			res -= cylinder(h + 2, self._axis_r, fn=self._axisFn) << [0, 0, -1]
 		
 		return res
 	
+	def equidistant(self, t, dist):
+		r = self._r
+		R = self._R
+		
+		e = self._e * r
+		
+		m = r / R
+		
+		x = R * (m + 1) * cos(m * t) * m - e * cos((m + 1) * t) * (m + 1)
+		y = R * (m + 1) * sin(m * t) * m - e * sin((m + 1) * t) * (m + 1)
+		
+		m = sqrt(x*x + y*y)
+
+		return [x / m * dist, y / m * dist]
+	
 	def epitrochoid(self, t):
 		r = self._r
 		R = self._R
-
+		
 		e = self._e * r
-
+		
 		m = r / R
 		
 		x = R * (m + 1) * cos(m * t) - e * cos((m + 1) * t)
 		y = R * (m + 1) * sin(m * t) - e * sin((m + 1) * t)
 		
-		xf = R * (m + 1) * cos(m * t) * m - e * cos((m + 1) * t) * (m + 1)
-		yf = R * (m + 1) * sin(m * t) * m - e * sin((m + 1) * t) * (m + 1)
+		xf, yf = self.equidistant(t, r)
+		x -= xf
+		y -= yf
 		
-		m = sqrt(xf*xf + yf*yf)
+		#xf = R * (m + 1) * cos(m * t) * m - e * cos((m + 1) * t) * (m + 1)
+		#yf = R * (m + 1) * sin(m * t) * m - e * sin((m + 1) * t) * (m + 1)
 		
-		x -= xf / m * r
-		y -= yf / m * r
+		#m = sqrt(xf*xf + yf*yf)
+		
+		#x -= xf / m * r
+		#y -= yf / m * r
 		
 		return [x, y]
 		
@@ -144,6 +180,14 @@ class EccCycl(object):
 	@slices.setter
 	def slices(self, val):
 		self._slices = int(val)
+		
+	@property
+	def bigGearFn(self):
+		return self._bigGearFn
+	
+	@bigGearFn.setter
+	def bigGearFn(self, val):
+		self._bigGearFn = int(val)
 		
 	@property
 	def smallGearFn(self):

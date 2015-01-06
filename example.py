@@ -6,18 +6,21 @@ from ecc_cycl import EccCycl
 
 gears = EccCycl()
 
-gears.setRnN(60, 20)
-gears.eccentricity = 0.5
+h = 14
+
+gears.setRnN(30, 6)
+gears.eccentricity = 0.3
 gears.dt = 0.1
 gears.smallGearAxisRadius = 1
-gears.bigGearAxisRadius = 1
-gears.smallGearFn = 200
-gears.slices = 20
-gears.bigGearConvexity = 1000
-gears.cycleHeight = 20
+gears.smallGearFn = 100
+gears.slices = 28
+gears.cycleHeight = 12
 
-res = gears.bigGear(20)
-res += (gears.smallGear(20) / [0, 0, 180]) << [63, 0,0]
+big = gears.bigGear(h, shell=0.01)
+
+small = (gears.smallGear(h) / [0, 0, 180]) << [35, 0, 0]
+
+res =  big + small
+
 res.save('result.scad')
-
 
